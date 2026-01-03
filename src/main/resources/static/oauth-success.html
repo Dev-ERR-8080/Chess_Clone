@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Success</title>
+</head>
+<body>
+
+<h2>Login Successful</h2>
+
+<p>Your JWT:</p>
+<pre id="token"></pre>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    document.getElementById("token").textContent = token;
+
+    // Optional: store token
+    localStorage.setItem("jwt", token);
+</script>
+
+</body>
+</html>

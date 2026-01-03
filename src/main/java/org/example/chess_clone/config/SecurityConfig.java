@@ -22,13 +22,18 @@ public class SecurityConfig {
 
     private final UserDetailsService userService;
     private final JwtAuthenticationFilter jwtFilter;
-    public SecurityConfig(UserDetailsService userService, JwtAuthenticationFilter jwtFilter) {
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final PasswordEncoder passwordEncoder;
+
+    public SecurityConfig(UserDetailsService userService, JwtAuthenticationFilter jwtFilter, OAuth2SuccessHandler oAuth2SuccessHandler, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.jwtFilter=jwtFilter;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+        this.passwordEncoder=passwordEncoder;
     }
 
     @Bean
-    public SecurityFilterChain newSecurityFilterChain(HttpSecurity http, DefaultAuthenticationEventPublisher authenticationEventPublisher) throws Exception {
+    public SecurityFilterChain newSecurityFilterChain(HttpSecurity http) throws Exception {
 
             http
                     .csrf(AbstractHttpConfigurer::disable)
@@ -36,39 +41,40 @@ public class SecurityConfig {
                             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                     )
                     .authorizeHttpRequests(auth->auth
-                            .requestMatchers("/auth/login","/auth/register","/user/hello").permitAll()
+                            .requestMatchers(
+                                    "/auth/**",
+                                    "/oauth2/**",
+                                    "/OAuthLogin.html"
+                            )
+                            .permitAll()
                             .anyRequest().authenticated()
+                    )
+
+                    .oauth2Login(oauth2->oauth2
+                            .successHandler(oAuth2SuccessHandler)
+                            .authorizationEndpoint(auth -> auth.baseUri("/oauth2/authorization"))
                     )
                     .authenticationProvider(authenticationProvider())
                     .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
             return http.build();
     }
 
-    // 🔐 Password encoding
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-//        return NoOpPasswordEncoder.getInstance(); // Use BCryptPasswordEncoder for password hashing
-        return new BCryptPasswordEncoder();
-    }
 
-    // 🔑 Authentication provider
+
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
 
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userService);
-        provider.setPasswordEncoder(passwordEncoder());
+        provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
-    // 🔁 Authentication manager (uses provider automatically)
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder authenticationManagerBuilder =
                 http.getSharedObject(AuthenticationManagerBuilder.class);
 
-        // Set the UserDetailsService and password encoder
         authenticationManagerBuilder
-                .userDetailsService(userService);
+                .userDetailsService(userService).passwordEncoder(passwordEncoder);
 
 
         // Return the AuthenticationManager object

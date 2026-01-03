@@ -4,9 +4,13 @@ import org.example.chess_clone.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface UserRepository extends JpaRepository<User,Long> {
-    User findUserByUsername(String userName);
+    Optional<User> findUserByUserEmailId(String userEmailId);
 
-    boolean existsByUsername(String userName);
+    boolean existsByUserEmailId(String userEmailId);
+
+    Optional<User> findUserByUsername(String username);
 }

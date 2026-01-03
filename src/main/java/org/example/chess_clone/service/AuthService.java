@@ -1,6 +1,8 @@
 package org.example.chess_clone.service;
 
+import org.example.chess_clone.model.DTO.LoginDto;
 import org.example.chess_clone.model.User;
+import org.example.chess_clone.model.UserPrincipal;
 import org.example.chess_clone.repository.UserRepository;
 import org.example.chess_clone.utils.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,7 +33,7 @@ public class AuthService {
     // ================= REGISTER =================
     public void register(User user) {
 
-        if (userRepository.existsByUsername(user.getUsername())) {
+        if (userRepository.existsByUserEmailId(user.getUserEmailId())) {
             throw new RuntimeException("Username already exists");
         }
 
@@ -40,19 +42,20 @@ public class AuthService {
     }
 
     // ================= LOGIN =================
-    public String login(User user) {
-
+    public String login(LoginDto loginDto) {
+        System.out.println("DTO = " + loginDto);
+        System.out.println(loginDto.getUserEmailId()+" "+loginDto.getPassword());
         Authentication authentication =
                 authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
-                                user.getUsername(),
-                                user.getPassword()
+                                loginDto.getUserEmailId(),
+                                loginDto.getPassword()
                         )
                 );
 
-        UserDetails userDetails =
-                (UserDetails) authentication.getPrincipal();
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
-        return jwtUtil.generateToken(userDetails);
+        return jwtUtil.generateToken(userPrincipal);
     }
+
 }

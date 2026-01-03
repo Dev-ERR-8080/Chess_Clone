@@ -22,15 +22,18 @@ public class User {
 
     @NotNull(message = "username filed cant be empty")
     @Size(min = 4,max=50,message = "User Name must have chars in between 4 and 50")
+    @Column(unique = true)
     String username;
 
     @NotNull(message = "email filed cant be empty")
+    @Column(unique = true)
     String userEmailId;
 
-    @NotNull(message = "password filed cant be empty")
-    @Size(min = 6,max = 512,message = "password is not valid")
     String password;
 
     @NotNull(message = "role of the user filed cant be empty")
     String role;
+
+    private boolean oauthUser;
+
 }
