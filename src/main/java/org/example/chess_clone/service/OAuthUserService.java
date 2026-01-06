@@ -18,7 +18,7 @@ public class OAuthUserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public User findOrCreateOAuthUser(String email) {
+    public User findOrCreateOAuthUser(String email, String name, String picture) {
         return userRepository.findUserByUserEmailId(email)
                 .orElseGet(() -> {
                     User user = new User();
@@ -26,7 +26,10 @@ public class OAuthUserService {
                     user.setUsername(email);
                     user.setPassword(passwordEncoder.encode("OAUTH_USER"));
                     user.setRole("USER");
+                    user.setFullName(name);
+                    user.setPfpUrl(picture);
                     user.setOauthUser(true);
+                    user.setRating(250);
                     return userRepository.save(user);
                 });
     }

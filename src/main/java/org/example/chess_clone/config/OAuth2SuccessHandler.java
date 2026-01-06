@@ -1,11 +1,11 @@
 package org.example.chess_clone.config;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.chess_clone.model.User;
 import org.example.chess_clone.model.UserPrincipal;
 import org.example.chess_clone.service.OAuthUserService;
+import org.example.chess_clone.utils.JwtCookieUtil;
 import org.example.chess_clone.utils.JwtUtil;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -21,13 +21,15 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
     private final OAuthUserService oAuthUserService;
+    private final JwtCookieUtil jwtCookieUtil;
 
     public OAuth2SuccessHandler(JwtUtil jwtUtil,
                                 UserDetailsService userDetailsService,
-                                OAuthUserService oAuthUserService) {
+                                OAuthUserService oAuthUserService, JwtCookieUtil jwtCookieUtil) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.oAuthUserService = oAuthUserService;
+        this.jwtCookieUtil = jwtCookieUtil;
     }
 
     @Override
@@ -38,21 +40,24 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     ) throws IOException {
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        String email = oAuth2User.getAttribute("email");
+//        System.out.println(oAuth2User.getAttributes());
 
-        User user = oAuthUserService.findOrCreateOAuthUser(email);
+        String email = oAuth2User.getAttribute("email");
+        String name = oAuth2User.getAttribute("name");
+        String picture = oAuth2User.getAttribute("picture");
+
+        User user = oAuthUserService.findOrCreateOAuthUser(email,name,picture);
 
         UserPrincipal principal = new UserPrincipal(user);
 
         String token = jwtUtil.generateToken(principal);
 
-        Cookie cookie = new Cookie("JWT", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
+        response.addHeader(
+                "Set-Cookie",
+                jwtCookieUtil.createJwtCookieHeader(token,false)
+        );
 
-        response.addCookie(cookie);
-        response.sendRedirect("/oauth-success.html");
+        response.sendRedirect("http://localhost:3000/home");
 
     }
 }

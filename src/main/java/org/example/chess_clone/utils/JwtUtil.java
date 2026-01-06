@@ -23,9 +23,9 @@ public class JwtUtil {
 
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
 
-    private Key getKey() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
-    }
+//    private Key getKey() {
+//        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
+//    }
 
     public String generateToken(UserPrincipal userPrincipal) {
         Map<String, Object> claims = new HashMap<>();
@@ -34,17 +34,17 @@ public class JwtUtil {
 
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(userPrincipal.getUsername())
+                .setSubject(userPrincipal.getUserEmailId())
                 .setIssuedAt(new Date())
                 .setExpiration(
                         new Date(System.currentTimeMillis() + 1000 * 60 * 60)
                 )
-                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
     public Claims extractClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getKey())
+                .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

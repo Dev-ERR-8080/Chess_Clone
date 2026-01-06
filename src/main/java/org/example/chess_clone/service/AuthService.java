@@ -1,6 +1,8 @@
 package org.example.chess_clone.service;
 
+import org.example.chess_clone.exceptionHandling.ApplicationExceptions;
 import org.example.chess_clone.model.DTO.LoginDto;
+import org.example.chess_clone.model.DTO.RegisterDto;
 import org.example.chess_clone.model.User;
 import org.example.chess_clone.model.UserPrincipal;
 import org.example.chess_clone.repository.UserRepository;
@@ -8,7 +10,6 @@ import org.example.chess_clone.utils.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -31,27 +32,47 @@ public class AuthService {
     }
 
     // ================= REGISTER =================
-    public void register(User user) {
+    public void register(RegisterDto dto) {
 
-        if (userRepository.existsByUserEmailId(user.getUserEmailId())) {
-            throw new RuntimeException("Username already exists");
+        if (userRepository.existsByUserEmailId(dto.getUserEmailId())) {
+            throw new ApplicationExceptions.EmailAlreadyExists("Email already exists. Try sign in");
         }
 
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setUserEmailId(dto.getUserEmailId());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setFullName(dto.getUserFullName());
+        // server-controlled fields
+        user.setRole("ROLE_USER");
+        user.setOauthUser(false);
+        user.setPfpUrl(null);
+        user.setRating(250);
+
         userRepository.save(user);
     }
 
+
     // ================= LOGIN =================
     public String login(LoginDto loginDto) {
-        System.out.println("DTO = " + loginDto);
-        System.out.println(loginDto.getUserEmailId()+" "+loginDto.getPassword());
-        Authentication authentication =
-                authenticationManager.authenticate(
+//        System.out.println("DTO = " + loginDto);
+//        System.out.println(loginDto.getUserEmailId()+" "+loginDto.getPassword());
+
+        if (loginDto.getUserEmailId() == null || loginDto.getPassword() == null) {
+            throw new ApplicationExceptions.BadRequest("Email and password are required");
+        }
+        Authentication authentication ;
+        try{
+            authentication =
+                    authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
                                 loginDto.getUserEmailId(),
                                 loginDto.getPassword()
                         )
                 );
+            }catch (Exception e) {
+                throw new ApplicationExceptions.UserNotFound("Invalid Email or password");
+            }
 
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 

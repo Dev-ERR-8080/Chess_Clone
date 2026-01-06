@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.Generated;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.UniqueElements;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @Entity
 @Table(name = "users")
@@ -29,11 +30,24 @@ public class User {
     @Column(unique = true)
     String userEmailId;
 
+    @Size(min = 6,max = 256, message = "Password constraints are not valid")
     String password;
 
-    @NotNull(message = "role of the user filed cant be empty")
+    @NotNull(message = "It's not you its us(Internal server error)")
     String role;
 
+    String pfpUrl;
+
+//    LocalDate dob;
+    @Column
+    private String fullName;
+
+
+    String country;
+
+    Integer rating;
+
     private boolean oauthUser;
+
 
 }

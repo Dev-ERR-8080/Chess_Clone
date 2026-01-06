@@ -1,5 +1,6 @@
 package org.example.chess_clone.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.example.chess_clone.service.UserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,10 +16,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig {
+public class        SecurityConfig {
 
     private final UserDetailsService userService;
     private final JwtAuthenticationFilter jwtFilter;
@@ -33,30 +39,56 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain newSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-            http
-                    .csrf(AbstractHttpConfigurer::disable)
-                    .sessionManagement(session->session
-                            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                    )
-                    .authorizeHttpRequests(auth->auth
-                            .requestMatchers(
-                                    "/auth/**",
-                                    "/oauth2/**",
-                                    "/OAuthLogin.html"
-                            )
-                            .permitAll()
-                            .anyRequest().authenticated()
-                    )
+        http
+                .cors(cors -> cors.configurationSource(request -> {
+                    CorsConfiguration config = new CorsConfiguration();
+                    config.setAllowedOrigins(List.of("http://localhost:3000"));
+                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
+                    config.setAllowCredentials(true);
 
-                    .oauth2Login(oauth2->oauth2
-                            .successHandler(oAuth2SuccessHandler)
-                            .authorizationEndpoint(auth -> auth.baseUri("/oauth2/authorization"))
-                    )
-                    .authenticationProvider(authenticationProvider())
-                    .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-            return http.build();
+                    return config;
+                }))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/auth/**",
+                                "/oauth/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
+                                "/OAuthLogin.html"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+
+                // 🔑 Prevent OAuth from hijacking API calls
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter()
+                                    .write("{\"message\":\"Unauthorized\"}");
+                        })
+                )
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(auth ->
+                                auth.baseUri("/oauth2/authorization")
+                        )
+                        .successHandler(oAuth2SuccessHandler)
+                )
+
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
 
